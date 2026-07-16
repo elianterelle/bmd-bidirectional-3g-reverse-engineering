@@ -169,12 +169,10 @@ It configures all pins as inputs and connects them to an ILA core. A 10k resisto
 
 # Example Vivado Projects
 
-There are a few example Vivado Projects located in `/vivado/`
+There are a few example Vivado Projects located in `/vivado/`. Every project directory includes a `README.md` with a brief description.
 
 | Project              | Description                                                |
 | -------------------- | ---------------------------------------------------------- |
 | bmd-bidi-pin-mapping | See above                                                  |
 | bmd-bidi-blink       | Blinks both LEDs using a simple counter at different rates |
 | bmd-bidi-hd-sdi-out  | Outputs a changing solid color over HD-SDI (1080p30)       |
-|                      |                                                            |
-
