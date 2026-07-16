@@ -4,7 +4,7 @@ This repository contains reverse engineered pinouts, constraint files and exampl
 
 <div align="center">
 
-![Top side of the PCB](doc/img/bmd-3g-bidi-board-top.png)
+![Top side of the PCB](doc/img/compressed/bmd-3g-bidi-board-top.jpg)
     <br>
     <i>Top side of the PCB</i>
     <br><br><br>
@@ -12,7 +12,7 @@ This repository contains reverse engineered pinouts, constraint files and exampl
 
 <div align="center">
 
-![Bottom side of the PCB](doc/img/bmd-3g-bidi-board-bottom.png)
+![Bottom side of the PCB](doc/img/compressed/bmd-3g-bidi-board-bottom.jpg)
     <br>
     <i>Bottom side of the PCB</i>
     <br><br><br>
@@ -28,7 +28,7 @@ The FPGA can be reconfigured using Vivado via the JTAG interface. Fortunately, t
 
 <div align="center">
 
-![JTAG Pinout](doc/img/bmd-3g-bidi-jtag.png)
+![JTAG Pinout](doc/img/compressed/bmd-3g-bidi-jtag.jpg)
     <br>
     <i>JTAG Pinout</i>
     <br><br><br>
