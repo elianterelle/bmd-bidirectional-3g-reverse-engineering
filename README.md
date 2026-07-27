@@ -58,6 +58,16 @@ The two LEDs SDI_LOCK and HDMI_LOCK are connected to the FPGA and switched at th
 | SDI_LOCK  | U9               | 14        | IO_L10P_T1_D14_14     |
 | HDMI_LOCK | N18              | 14        | IO_L24P_T3_A01_D17_14 |
 
+## Testpoints
+
+There are three Testpoints right next to the FPGA:
+
+| Testpoint | FPGA Package Pin | FPGA Bank | FPGA Pin Name      |
+| --------- | ---------------- | --------- | ------------------ |
+| TP3       | R1               | 34        | IO_L13N_T2_MRCC_34 |
+| TP4       | U1               | 34        | IO_L15N_T2_DQS_34  |
+| TP5       | P1               | 34        | IO_L9N_T1_DQS_34   |
+
 ## SDI Driver (Output)
 
 The SDI Driver, a Texas Instruments LMH0307, is connected to the following pins of the FPGA:
