@@ -36,6 +36,8 @@ The FPGA can be reconfigured using Vivado via the JTAG interface. Fortunately, t
 
 ### Flash
 
+The flash attached to the FPGA is a Macronix MX25L3233F it can be selected in the Vivado Hardware Manager (`xc7a25t`->`Add Configuration Memory Device`) and works out of the box.
+
 ### IO Banks
 
 | Bank | Voltage |
@@ -78,7 +80,7 @@ The SDI Driver, a Texas Instruments LMH0307, is connected to the following pins 
 | ENABLE      | R17              | 14        | IO_L14N_T2_SRCC_14 |
 | SDA         | T15              | 14        | IO_L13N_T2_MRCC_14 |
 | SCL         | T14              | 14        | IO_L13P_T2_MRCC_14 |
-| FAULT       | ?                | ?         | ?                  |
+| FAULT       | P14              | 14        | IO_L12P_T1_MRCC_14 |
 | SDI_P       | H2               | 216       | MGTPTXP0_216       |
 | SDI_N       | H1               | 216       | MGTPTXN0_216       |
 
@@ -86,58 +88,71 @@ The SDI Driver, a Texas Instruments LMH0307, is connected to the following pins 
 
 The SDI Equalizer, a Texas Instruments LMH0324, is connected to the following pins of the FPGA:
 
-| LMH0324 Pin | FPGA Package Pin | FPGA Bank | FPGA Pin Name |
-| ----------- | ---------------- | --------- | ------------- |
-| CD_N        | ?                | ?         | ?             |
-| SS_N        | ?                | ?         | ?             |
-| MISO        | ?                | ?         | ?             |
-| MOSI        | ?                | ?         | ?             |
-| SCK         | ?                | ?         | ?             |
-| SDA         | ?                | ?         | ?             |
-| SCL         | ?                | ?         | ?             |
-| OUT0_P      | ?                | ?         | ?             |
-| OUT0_N      | ?                | ?         | ?             |
+| LMH0324 Pin | FPGA Package Pin | FPGA Bank | FPGA Pin Name      |
+| ----------- | ---------------- | --------- | ------------------ |
+| CD_N        | NC               | NC        | NC                 |
+| SS_N_ADDR0  | A12              | 15        | IO_L7N_T1_AD10N_15 |
+| MISO_ADDR1  | A15              | 15        | IO_L10N_T1_AD4N_15 |
+| MOSI_SDA    | A14              | 15        | IO_L8N_T1_AD3N_15  |
+| SCK_SCL     | A13              | 15        | IO_L8P_T1_AD3P_15  |
+| OUT0_P      | G3               | 216       | MGTPRXN3_216       |
+| OUT0_N      | G4               | 216       | MGTPRXP3_216       |
 
 with the following configuration Pins:
 
-| LMH0324 Pin | Connected To |
-| ----------- | ------------ |
-| IN_OUT_SEL  | ?            |
-| OUT_CTRL    | ?            |
-| VOD_DE      | ?            |
-| MODE_SEL    | ?            |
-| ADDR0       | ?            |
-| ADDR1       | ?            |
+| LMH0324 Pin | Connected To  |
+| ----------- | ------------- |
+| IN_OUT_SEL  | NC            |
+| OUT_CTRL    | NC            |
+| VOD_DE      | 1K to VDD (H) |
+| MODE_SEL    | NC (SPI)      |
 
 ## HDMI Retimer (Input)
 
 The HDMI Input uses a Texas Instruments TMDS171 retimer.
 
-| TMDS171 Pin | FPGA Package Pin | FPGA Bank | FPGA Pin Name |
-| ----------- | ---------------- | --------- | ------------- |
-| OUT_D0_P    | ?                | ?         | ?             |
-| OUT_D0_N    | ?                | ?         | ?             |
-| OUT_D1_P    | ?                | ?         | ?             |
-| OUT_D1_N    | ?                | ?         | ?             |
-| OUT_D2_P    | ?                | ?         | ?             |
-| OUT_D2_N    | ?                | ?         | ?             |
-| OUT_CLK_P   | ?                | ?         | ?             |
-| OUT_CLK_N   | ?                | ?         | ?             |
-| SDA_SNK     | ?                | ?         | ?             |
-| SCL_SNK     | ?                | ?         | ?             |
-| HPD_SNK     | ?                | ?         | ?             |
-| SPDIF_IN    | ?                | ?         | ?             |
-| ARC_OUT     | ?                | ?         | ?             |
-| OE          | ?                | ?         | ?             |
-| SIG_EN      | ?                | ?         | ?             |
-| PRE_SEL     | ?                | ?         | ?             |
-| SDA_CTL     | ?                | ?         | ?             |
-| SCL_CTL     | ?                | ?         | ?             |
-| I2C_EN/PIN  | ?                | ?         | ?             |
-| EQ_SEL/A0   | ?                | ?         | ?             |
-| A1          | ?                | ?         | ?             |
-| TX_TERM_CTL | ?                | ?         | ?             |
-| SWAP/POL    | ?                | ?         | ?             |
+Note: The differential pairs between the HDMI Connector and the retimer are both lane swapped and polarity swapped (if we assume i traced them correctly). Due to the SWAP_POL Pin being pulled low, lane swapping is already active. Polarity swapping has to be enabled via I2C (or maybe the data can be inverted in the fpga).
+
+When lane and polarity swapping are enabled in the TMDS171, the signals are internally routed to the correct outputs, so the following pin mapping to the FPGA is correct.
+
+| TMDS171 Pin | FPGA Package Pin | FPGA Bank | FPGA Pin Name           |
+| ----------- | ---------------- | --------- | ----------------------- |
+| OUT_D0_P    | E4               | 216       | MGTPRXP0_216            |
+| OUT_D0_N    | E3               | 216       | MGTPRXN0_216            |
+| OUT_D1_P    | C4               | 216       | MGTPRXP2_216            |
+| OUT_D1_N    | C3               | 216       | MGTPRXN2_216            |
+| OUT_D2_P    | A4               | 216       | MGTPRXP1_216            |
+| OUT_D2_N    | A3               | 216       | MGTPRXN1_216            |
+| OUT_CLK_P   | D6               | 216       | MGTREFCLK0P_216         |
+| OUT_CLK_N   | D5               | 216       | MGTREFCLK0N_216         |
+| SDA_SNK     | U15              | 14        | IO_L17P_T2_A14_D30_14   |
+| SCL_SNK     | N14              | 14        | IO_L8N_T1_D12_14        |
+| OE          | M15              | 14        | IO_L6N_T0_D08_VREF_14   |
+| SDA_CTL     | K17              | 14        | IO_L4P_T0_D04_14        |
+| SCL_CTL     | K18              | 14        | IO_L3N_T0_DQS_EMCCLK_14 |
+| HPD_SNK     | R13              | 14        | IO_L19P_T3_A10_D26_14   |
+
+
+| TMDS171 Pin | Connected To           |
+| ----------- | ---------------------- |
+| IN_CLK_N    | HDMI IN D2_P           |
+| IN_CLK_P    | HDMI IN D2_N           |
+| IN_D0_N     | HDMI IN D1_P           |
+| IN_D0_P     | HDMI IN D1_N           |
+| IN_D1_N     | HDMI IN D0_P           |
+| IN_D1_P     | HDMI IN D0_N           |
+| IN_D2_N     | HDMI IN CLK_P          |
+| IN_D2_P     | HDMI IN CLK_N          |
+| HPD_SRC     | HDMI IN HPD            |
+| SPDIF_IN    | 10K -> GND             |
+| ARC_OUT     | NC                     |
+| SIG_EN      | NC (Unpop. Res -> GND) |
+| PRE_SEL     | NC                     |
+| I2C_EN/PIN  | 10K -> VCC             |
+| EQ_SEL/A0   | 10K -> GND             |
+| A1          | GND                    |
+| TX_TERM_CTL | 10K -> VCC             |
+| SWAP/POL    | 10K -> GND             |
 
 ## HDMI Driver (Output)
 
@@ -168,6 +183,31 @@ The HDMI Output uses a Texas Instruments TDP158 retimer / driver.
 ## Microcontroller
 
 The STM32F072VBH6 is connected to the USB-C Port and to the FPGA in a currently unknown way. There are pads labeled `rx` and `tx` next to it. It might be possible to use these to flash the stm32 via usart, but i haven't tested this yet.
+
+### Microcontroller <-> FPGA Pin Mapping
+
+| STM32 Pin | FPGA Package Pin | FPGA Bank | FPGA Pin Name             |
+| --------- | ---------------- | --------- | ------------------------- |
+| PE0       | T10              |           | INIT_B_0                  |
+| PE1       | P10              |           | PROGRAM_B_0               |
+| PE2       | F12              |           | DONE_0                    |
+| PB2       | T17              | 14        | IO_L16P_T2_CSI_B_14       |
+| PE12      | L14              | 14        | IO_0_14                   |
+| PB13      | V13              | 14        | IO_L21N_T3_DQS_A06_D22_14 |
+| PB15      | U17              | 14        | IO_L16N_T2_A15_D31_14     |
+
+### Microcontroller Pin Mapping
+
+| STM32 Pin | Connected To                  |
+| --------- | ----------------------------- |
+| PC7       | PWR LED (-)                   |
+| PA11      | USB D-                        |
+| PA12      | USB D+                        |
+| BOOT0     | Button next to STM32 (to VDD) |
+| PA0       | Testpad TX                    |
+| PA1       | Testpad RX                    |
+| PA13      | Small Testpad Left (SWDIO)    |
+| PA14      | Small Testpad Right (SWCLK)   |
 
 # Reverse Engineering Techniques
 
