@@ -251,10 +251,10 @@ A thin piece of wire (like a leg from a resistor) and a piece of solder wick att
 
 There are a few example Vivado Projects located in `/vivado/`. Every project directory includes a `README.md` with a brief description.
 
-| Project              | Description                                                                                                           |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| bmd-bidi-pin-mapping | See above                                                                                                             |
-| bmd-bidi-blink       | Blinks both LEDs using a simple counter at different rates                                                            |
-| bmd-bidi-hd-sdi-out  | Outputs SMPTE Color Bars or a Pathological Pattern via HD-SDI (1080p30, not fully compliant, crc not implemented yet) |
-|                      |                                                                                                                       |
+| Project              | Description                                                                                                                   |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| bmd-bidi-pin-mapping | See above                                                                                                                     |
+| bmd-bidi-blink       | Blinks both LEDs using a simple counter at different rates                                                                    |
+| bmd-bidi-hd-sdi-out  | Outputs SMPTE Color Bars or a Pathological Pattern via HD-SDI (1080p30, not fully compliant, crc not implemented yet)         |
+| bmd-bidi-3g-sdi-out  | Outputs SMPTE Color Bars or a Pathological Pattern via 3G-SDI Level-A (1080p60, not fully compliant, crc not implemented yet) |
 
