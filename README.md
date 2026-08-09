@@ -158,27 +158,43 @@ When lane and polarity swapping are enabled in the TMDS171, the signals are inte
 
 The HDMI Output uses a Texas Instruments TDP158 retimer / driver.
 
-| TDP158 Pin   | FPGA Package Pin | FPGA Bank | FPGA Pin Name |
-| ------------ | ---------------- | --------- | ------------- |
-| IN_D0_P      | ?                | ?         | ?             |
-| IN_D0_N      | ?                | ?         | ?             |
-| IN_D1_P      | ?                | ?         | ?             |
-| IN_D1_N      | ?                | ?         | ?             |
-| IN_D2_P      | ?                | ?         | ?             |
-| IN_D2_N      | ?                | ?         | ?             |
-| IN_CLK_P     | ?                | ?         | ?             |
-| IN_CLK_N     | ?                | ?         | ?             |
-| HPD_SRC      | ?                | ?         | ?             |
-| SDA_SRC      | ?                | ?         | ?             |
-| SCL_SRC      | ?                | ?         | ?             |
-| OE           | ?                | ?         | ?             |
-| I2C_EN       | ?                | ?         | ?             |
-| SDA_CTL/PRE  | ?                | ?         | ?             |
-| SCL_CTL/SWAP | ?                | ?         | ?             |
-| A0/EQ1       | ?                | ?         | ?             |
-| A1/EQ2       | ?                | ?         | ?             |
-| SLEW         | ?                | ?         | ?             |
-| TERM         | ?                | ?         | ?             |
+| TDP158 Pin   | FPGA Package Pin | FPGA Bank | FPGA Pin Name         |
+| ------------ | ---------------- | --------- | --------------------- |
+| IN_D0_P      | B2               | 216       | MGTPTXP3_216          |
+| IN_D0_N      | B1               | 216       | MGTPTXN3_216          |
+| IN_D1_P      | D2               | 216       | MGTPTXP2_216          |
+| IN_D1_N      | D1               | 216       | MGTPTXN2_216          |
+| IN_D2_P      | F2               | 216       | MGTPTXP1_216          |
+| IN_D2_N      | F1               | 216       | MGTPTXN1_216          |
+| IN_CLK_P     | R3               | 34        | IO_L14P_T2_SRCC_34    |
+| IN_CLK_N     | T2               | 34        | IO_L14N_T2_SRCC_34    |
+| HPD_SRC      | N16              | 14        | IO_L9P_T1_DQS_14      |
+| SDA_SRC      | V12              | 14        | IO_L21P_T3_DQS_14     |
+| SCL_SRC      | U12              | 14        | IO_L22N_T3_A04_D20_14 |
+| OE           | N17              | 14        | IO_L9N_T1_DQS_D13_14  |
+| SDA_CTL/PRE  | M17              | 14        | IO_L7N_T1_D10_14      |
+| SCL_CTL/SWAP | M16              | 14        | IO_L7P_T1_D09_14      |
+
+
+| TDP158 Pin | Connected To           |
+| ---------- | ---------------------- |
+| OUT_D0_P   | HDMI OUT D0_P          |
+| OUT_D0_N   | HDMI OUT D0_N          |
+| OUT_D1_P   | HDMI OUT D1_P          |
+| OUT_D1_N   | HDMI OUT D1_N          |
+| OUT_D2_P   | HDMI OUT D2_P          |
+| OUT_D2_N   | HDMI OUT D2_N          |
+| OUT_CLK_P  | HDMI OUT CLK_P         |
+| OUT_CLK_N  | HDMI OUT CLK_N         |
+| SDA_SNK    | HDMI OUT SDA           |
+| SCL_SNK    | HDMI OUT SCL           |
+| HPD_SNK    | HDMI OUT HPD           |
+| I2C_EN     | 10K -> VCC             |
+| A0/EQ1     | NC                     |
+| A1/EQ2     | NC                     |
+| SLEW       | NC                     |
+| TERM       | NC (Unpop. Res -> VCC) |
+| VSADJ      | 6K5 -> GND             |
 
 ## Microcontroller
 
