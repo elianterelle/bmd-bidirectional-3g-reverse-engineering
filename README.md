@@ -198,7 +198,7 @@ The HDMI Output uses a Texas Instruments TDP158 retimer / driver.
 
 ## Microcontroller
 
-The STM32F072VBH6 is connected to the USB-C Port and to the FPGA in a currently unknown way. There are pads labeled `rx` and `tx` next to it. It might be possible to use these to flash the stm32 via usart, but i haven't tested this yet.
+The STM32F072VBH6 is connected to the USB-C Port and to the FPGA. There are pads labeled `rx` and `tx` next to it, and also two smaller testpads which can be used to flash the MCU via SWD.
 
 ### Microcontroller <-> FPGA Pin Mapping
 
@@ -229,9 +229,23 @@ The STM32F072VBH6 is connected to the USB-C Port and to the FPGA in a currently 
 
 ## Pin Mapping
 
+### With Populated Components
 The Vivado Project in `vivado/bmd-bidi-pin-mapping` can be used to map out which pins of the fpga connect to pins of other chips / leds / ...
 
 It configures all pins as inputs and connects them to an ILA core. A 10k resistor connected to gnd or the bank voltage can then be touched to a pin to pull up / down the signal. This can then be seen in the ILA Debugger.
+
+### With Unpopulated Components
+
+For some pins, it is necessary / quicker to desolder the fpga and other ICs and test for continuity using a multimeter.
+A thin piece of wire (like a leg from a resistor) and a piece of solder wick attached to some probe wires make this relatively easy. One probe goes on the pad of the component to be traced, the solder wick on the other probe can then be used to brush over the bga pads of the fpga to find the rough location of the matching pin without probing every pin individually. The exact pin can then be found with the piece of wire.
+
+<div align="center">
+
+![Probes as described above](doc/img/compressed/pin-mapping-probes.jpg)
+    <br>
+    <i>Probes as described above</i>
+    <br><br><br>
+</div>
 
 # Example Vivado Projects
 
