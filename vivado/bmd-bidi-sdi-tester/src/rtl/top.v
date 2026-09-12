@@ -24,10 +24,12 @@
 module top(
         input wire refclk_p,
         input wire refclk_n,
-        // Runtime mode selection. Both are meant to be driven by a physical
-        // switch, so they are free running and completely asynchronous.
-        input wire sw_rate_3g,             // 1: 3G-SDI (1080p60), 0: HD-SDI (1080p30)
-        input wire sw_pattern_pathological,// 1: pathological, 0: SMPTE bars
+        // Runtime configuration, written by the on board STM32.
+        // See the register map below.
+        input  wire spi_cs_n,
+        input  wire spi_sck,
+        input  wire spi_mosi,
+        output wire spi_miso,
         output wire led_sdi_lock,
         output wire led_hdmi_lock,
         output wire gtp_tx_n,
@@ -70,24 +72,61 @@ end
 // -----------------------------------------------------------------------------
 // Mode inputs
 // -----------------------------------------------------------------------------
-// Two flip flops each to synchronise the switches into the clk domain.
-(* ASYNC_REG = "TRUE" *) reg [1:0] sw_rate_3g_meta = 2'b11;
-(* ASYNC_REG = "TRUE" *) reg [1:0] sw_pattern_meta = 2'b00;
+// Everything that can be changed at runtime lives in the SPI register file.
+// It only hands out register bits; decoding them into something the SDI logic
+// understands happens here, so the transport can be swapped for anything else
+// without the rest of the design noticing.
+//
+//   addr 0  rate     0x00 HD-SDI (1080p30)
+//                    0x01 3G-SDI (1080p60)
+//   addr 1  pattern  0x00 SMPTE bars
+//                    0x01 pathological
+//
+// SPI mode 0, MSB first. Pull cs_n low, send {rw, addr[6:0]}, then one data
+// byte per register (the address auto increments), release cs_n. With rw = 0
+// the data bytes are written, with rw = 1 they are only shifted back out on
+// miso. miso returns the addressed register during the data bytes either way,
+// so a write reads back the value it replaced.
+localparam integer CFG_NUM_REGS = 2;
 
-always @(posedge clk) begin
-    sw_rate_3g_meta <= {sw_rate_3g_meta[0], sw_rate_3g};
-    sw_pattern_meta <= {sw_pattern_meta[0], sw_pattern_pathological};
-end
+localparam [7:0] RATE_HD              = 8'h00;
+localparam [7:0] RATE_3G              = 8'h01;
+localparam [7:0] PATTERN_SMPTE_BARS   = 8'h00;
+localparam [7:0] PATTERN_PATHOLOGICAL = 8'h01;
 
-(* MARK_DEBUG = "TRUE" *) wire rate_3g_req = sw_rate_3g_meta[1];
-(* MARK_DEBUG = "TRUE" *) wire pattern_pathological_sel = sw_pattern_meta[1];
+// Come up in 3G with colour bars. The rate default has to agree with the
+// rate_sel default below, which in turn has to agree with TXOUT_DIV.
+localparam [8*CFG_NUM_REGS-1:0] CFG_REGS_INIT = {PATTERN_SMPTE_BARS, RATE_3G};
 
-// The active line rate. Only ever changed while the whole datapath and the
-// GTP TX are held in reset, so the clock enable patterns below never change
-// while anything downstream is running.
-// Starts up as 3G so that it matches the TXOUT_DIV attribute of the GTP; a
-// switch set to HD then produces a real TXRATE transition after configuration.
-(* MARK_DEBUG = "TRUE" *) reg mode_3g = 1'b1;
+(* MARK_DEBUG = "TRUE" *) wire [8*CFG_NUM_REGS-1:0] cfg_regs;
+
+spi_register_file #(
+    .NUM_REGS  (CFG_NUM_REGS),
+    .REGS_INIT (CFG_REGS_INIT)
+) spi_register_file_inst (
+    .clk      (clk),
+    .spi_cs_n (spi_cs_n),
+    .spi_sck  (spi_sck),
+    .spi_mosi (spi_mosi),
+    .spi_miso (spi_miso),
+    .regs     (cfg_regs)
+);
+
+wire [7:0] cfg_rate    = cfg_regs[8*0 +: 8];
+wire [7:0] cfg_pattern = cfg_regs[8*1 +: 8];
+
+// Unknown values fall back to the safe default rather than doing nothing.
+(* MARK_DEBUG = "TRUE" *) wire rate_3g_req = (cfg_rate != RATE_HD);
+(* MARK_DEBUG = "TRUE" *) wire pattern_pathological_sel = (cfg_pattern == PATTERN_PATHOLOGICAL);
+
+// rate_sel drives TXRATE, mode_3g drives the fabric clock enables below.
+// These are deliberately two separate registers that move at different times,
+// see the rate change sequencer further down.
+// Both come up as 3G because UG482 (v1.9) p.108 requires that "the TXOUT_DIV
+// attribute and the TXRATE port must select the same D divider value upon
+// device configuration".
+(* MARK_DEBUG = "TRUE" *) reg rate_sel = 1'b1;
+(* MARK_DEBUG = "TRUE" *) reg mode_3g  = 1'b1;
 
 // TX datapath / TXUSRCLK. 20 bit wide, so it runs at the line rate / 20:
 // 148.5 MHz for 3G-SDI, 74.25 MHz for HD-SDI.
@@ -116,28 +155,102 @@ always @(posedge clk) begin
     counter <= counter + 1;
 end
 
+(* MARK_DEBUG = "TRUE" *) wire txratedone; // from the GTPE2_CHANNEL below
+
 (* MARK_DEBUG = "TRUE" *) reg reset = 1;
 reg [16:0] reset_counter = 1;
 
-wire rate_change = (mode_3g != rate_3g_req);
+// -----------------------------------------------------------------------------
+// Rate change sequencer
+// -----------------------------------------------------------------------------
+// TXRATE cannot simply be flipped together with the fabric clocks. Per UG482
+// (v1.9) Table 3-24, TXRATE is a TXUSRCLK2 synchronous input and TXRATEDONE is
+// "asserted High for one TXUSRCLK2 cycle in response to a change on the TXRATE
+// port" - the transceiver reacts to the *edge* on TXRATE, sampled in the
+// TXUSRCLK2 domain. With TXRATEMODE = 1'b0 it then runs the matching reset
+// sequence itself: "the required reset sequence is performed automatically.
+// When TXRATEDONE is asserted, it indicates that both the rate change and the
+// necessary reset sequence have been applied and completed" (UG482 p.43).
+//
+// So the order has to be:
+//   RATE_RUN    normal operation. TXUSRCLK2 (sdi_clk) is stable and the TX is
+//               up, which is the only state in which TXRATE may be moved.
+//   RATE_TXRATE TXRATE has changed, wait for the transceiver to report
+//               TXRATEDONE (with a timeout as a backstop).
+//   RATE_RESET  now hold the datapath in reset, swap the fabric clocks and run
+//               the full TX re-initialisation via powerup_channel.
+localparam RATE_RUN    = 2'd0,
+           RATE_TXRATE = 2'd1,
+           RATE_RESET  = 2'd2;
 
-// count up until rollover, then pull reset low. A change of the rate switch
-// restarts the counter, which also restarts the GTP TX startup sequence via
-// powerup_channel below.
-always @(posedge clk) begin
-    if (rate_change) begin
-        mode_3g       <= rate_3g_req;
-        reset         <= 1;
-        reset_counter <= 1;
-    end else if (reset_counter != 0) begin
-        reset_counter <= reset_counter + 1;
-    end else if (clkdiv_counter == 2'b11) begin
-        // Release reset on the edge that wraps clkdiv_counter to 0, so that
-        // the first active sdi_clk edge afterwards is also a pixel_pair_clk
-        // edge. That keeps the phase of sdi_pixel_pair_to_20_bit relative to
-        // the pixel pair source deterministic in both modes.
-        reset <= 0;
+// Point inside the reset window at which the fabric clocks are switched. By
+// then the reset controller has long since asserted GTTXRESET.
+localparam RATE_APPLY_COUNT   = 17'h04000;
+localparam TXRATEDONE_TIMEOUT = 17'h05000;
+
+(* MARK_DEBUG = "TRUE" *) reg [1:0] rate_state = RATE_RESET;
+
+// TXRATEDONE is a single TXUSRCLK2 cycle pulse, so latch it in that domain
+// before bringing it back over to clk.
+reg txratedone_latched = 1'b0;
+always @(posedge sdi_clk) begin
+    if (rate_state != RATE_TXRATE) begin
+        txratedone_latched <= 1'b0;
+    end else if (txratedone) begin
+        txratedone_latched <= 1'b1;
     end
+end
+
+(* ASYNC_REG = "TRUE" *) reg [1:0] txratedone_meta = 2'b00;
+always @(posedge clk) begin
+    txratedone_meta <= {txratedone_meta[0], txratedone_latched};
+end
+
+// A bouncing switch just keeps restarting the sequence, and the request is
+// re-sampled every time, so it always ends up matching the settled position.
+always @(posedge clk) begin
+    case (rate_state)
+        RATE_RUN: begin
+            // Let the link settle after the last re-initialisation before
+            // touching TXRATE again.
+            if (reset_counter != 0) begin
+                reset_counter <= reset_counter + 1;
+            end else if (rate_sel != rate_3g_req) begin
+                rate_sel      <= rate_3g_req;
+                reset_counter <= 1;
+                rate_state    <= RATE_TXRATE;
+            end
+        end
+
+        RATE_TXRATE: begin
+            reset_counter <= reset_counter + 1;
+            if (txratedone_meta[1] || reset_counter == TXRATEDONE_TIMEOUT) begin
+                reset         <= 1;
+                reset_counter <= 1;
+                rate_state    <= RATE_RESET;
+            end
+        end
+
+        RATE_RESET: begin
+            if (reset_counter != 0) begin
+                reset_counter <= reset_counter + 1;
+                if (reset_counter == RATE_APPLY_COUNT) begin
+                    mode_3g <= rate_sel;
+                end
+            end else if (clkdiv_counter == 2'b11) begin
+                // Release reset on the edge that wraps clkdiv_counter to 0, so
+                // that the first active sdi_clk edge afterwards is also a
+                // pixel_pair_clk edge. That keeps the phase of
+                // sdi_pixel_pair_to_20_bit relative to the pixel pair source
+                // deterministic in both modes.
+                reset         <= 0;
+                reset_counter <= 1;
+                rate_state    <= RATE_RUN;
+            end
+        end
+
+        default: rate_state <= RATE_RESET;
+    endcase
 end
 
 (* MARK_DEBUG = "TRUE" *) wire [9:0] source_Y0;
@@ -279,7 +392,6 @@ gtx_tx_reset_controller gtx_tx_reset_controller_inst(
 (* MARK_DEBUG = "TRUE" *) wire [15:0] txdata = {sdi_nrzi_data[17:10], sdi_nrzi_data[7:0]};
 
 (* MARK_DEBUG = "TRUE" *) wire txbufstatus_out;
-(* MARK_DEBUG = "TRUE" *) wire txratedone;
 
 parameter PLL0_FBDIV_IN      = 4;
 parameter PLL1_FBDIV_IN      = 1;
@@ -938,7 +1050,7 @@ gtpe2_i
     .TXMARGIN                       (3'b0),
     // 010: TXOUT_DIV = 2 -> 2.97 Gb/s (3G-SDI)
     // 011: TXOUT_DIV = 4 -> 1.485 Gb/s (HD-SDI)
-    .TXRATE                         (mode_3g ? 3'b010 : 3'b011),
+    .TXRATE                         (rate_sel ? 3'b010 : 3'b011),
     .TXSWING                        (1'b0),
     //---------------- Transmit Ports - Pattern Generator Ports ----------------
     .TXPRBSFORCEERR                 (1'b0),

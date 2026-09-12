@@ -202,15 +202,20 @@ The STM32F072VBH6 is connected to the USB-C Port and to the FPGA. There are pads
 
 ### Microcontroller <-> FPGA Pin Mapping
 
-| STM32 Pin | FPGA Package Pin | FPGA Bank | FPGA Pin Name             |
-| --------- | ---------------- | --------- | ------------------------- |
-| PE0       | T10              |           | INIT_B_0                  |
-| PE1       | P10              |           | PROGRAM_B_0               |
-| PE2       | F12              |           | DONE_0                    |
-| PB2       | T17              | 14        | IO_L16P_T2_CSI_B_14       |
-| PE12      | L14              | 14        | IO_0_14                   |
-| PB13      | V13              | 14        | IO_L21N_T3_DQS_A06_D22_14 |
-| PB15      | U17              | 14        | IO_L16N_T2_A15_D31_14     |
+| STM32 Pin | FPGA Package Pin | FPGA Bank | FPGA Pin Name             | Probably used as |
+| --------- | ---------------- | --------- | ------------------------- | ---------------- |
+| PE0       | T10              |           | INIT_B_0                  |                  |
+| PE1       | P10              |           | PROGRAM_B_0               |                  |
+| PE2       | F12              |           | DONE_0                    |                  |
+| PB2       | T17              | 14        | IO_L16P_T2_CSI_B_14       |                  |
+| PB12      | L14              | 14        | IO_0_14                   | SPI2_NSS         |
+| PB13      | V13              | 14        | IO_L21N_T3_DQS_A06_D22_14 | SPI2_SCK         |
+| PB14      | U14              | 14        | IO_L20P_T3_A08_D24_14     | SPI2_MISO        |
+| PB15      | U17              | 14        | IO_L16N_T2_A15_D31_14     | SPI2_MOSI        |
+| PE12      | L15              | 14        | IO_L6P_T0_FCS_B_14        | FPGA Flash CS    |
+| PE13      | E8               | 0         | CCLK_0                    | FPGA Flash CLK   |
+| PE14      | L17              | 14        | IO_L1N_T0_D01_DIN_14      | FPGA Flash MISO  |
+| PE15      | K16              | 14        | IO_L1P_T0_D00_MOSI_14     | FPGA Flash MOSI  |
 
 ### Microcontroller Pin Mapping
 

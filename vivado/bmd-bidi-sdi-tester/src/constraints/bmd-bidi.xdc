@@ -18,17 +18,26 @@ set_property IOSTANDARD LVCMOS33 [get_ports led_sdi_lock]
 set_false_path -to [get_ports led_hdmi_lock]
 set_false_path -to [get_ports led_sdi_lock]
 
-# Mode switches
-# TODO: adjust to wherever the switches are actually wired up. TP3 and TP4 are
-# in bank 34 (1.2V), the internal pull up lets a switch to GND drive them.
-set_property PACKAGE_PIN R1 [get_ports sw_rate_3g]
-set_property IOSTANDARD LVCMOS12 [get_ports sw_rate_3g]
-set_property PULLUP true [get_ports sw_rate_3g]
-set_property PACKAGE_PIN U1 [get_ports sw_pattern_pathological]
-set_property IOSTANDARD LVCMOS12 [get_ports sw_pattern_pathological]
-set_property PULLUP true [get_ports sw_pattern_pathological]
-set_false_path -from [get_ports sw_rate_3g]
-set_false_path -from [get_ports sw_pattern_pathological]
+# STM32 SPI (STM32 is the master, FPGA the slave)
+# Bank 14 is 3.3V. cs_n gets a pull up so the register file stays deselected
+# while the STM32 is in reset and its pins are still floating.
+set_property PACKAGE_PIN L14 [get_ports spi_cs_n]
+set_property IOSTANDARD LVCMOS33 [get_ports spi_cs_n]
+set_property PULLUP true [get_ports spi_cs_n]
+set_property PACKAGE_PIN V13 [get_ports spi_sck]
+set_property IOSTANDARD LVCMOS33 [get_ports spi_sck]
+set_property PACKAGE_PIN U17 [get_ports spi_mosi]
+set_property IOSTANDARD LVCMOS33 [get_ports spi_mosi]
+set_property PACKAGE_PIN U14 [get_ports spi_miso]
+set_property IOSTANDARD LVCMOS33 [get_ports spi_miso]
+
+# The inputs are oversampled in the clk domain behind ASYNC_REG synchronisers,
+# and miso is turned around off the same oversampled sck, so none of these are
+# timed against a clock. Keep sck at or below roughly clk/10.
+set_false_path -from [get_ports spi_cs_n]
+set_false_path -from [get_ports spi_sck]
+set_false_path -from [get_ports spi_mosi]
+set_false_path -to [get_ports spi_miso]
 
 # SDI TX
 set_property PACKAGE_PIN H1 [get_ports gtp_tx_n]
